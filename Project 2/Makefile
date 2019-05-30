@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-Wall 
 
-make: plock.c main.c
-	$(CC) $(CFLAGS) plock.c main.c -pthread
+make: plock.c test1.c
+	$(CC) $(CFLAGS) plock.c test1.c -pthread
 
 clean:
 	rm a.out
