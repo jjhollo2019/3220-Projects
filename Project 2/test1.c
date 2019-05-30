@@ -47,7 +47,7 @@ int main( int argc, char **argv ){
      if( rc ){ printf( "** could not join thread %d\n", i ); exit( -1 ); }
    }
 
-   //plock_destroy( priority_lock );
+   plock_destroy( priority_lock );
 
    return 0;
 }
