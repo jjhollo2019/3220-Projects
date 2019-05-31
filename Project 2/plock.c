@@ -30,6 +30,24 @@ void plock_destroy (plock_t *lock) {
 
 void plock_enter (plock_t *lock, int priority) {
 
+	pthread_mutex_lock(&lock->mlock);
+
+	if (lock->head == NULL) {
+		node_t *node = malloc(sizeof(node_t));
+		node->priority = priority;
+		pthread_cond_init(&node->waitCV, NULL);
+		node->next = NULL;
+		lock->head = node;
+	}
+	else {
+		node_t *node = malloc(sizeof(node_t));
+		node->priority = priority;
+		pthread_cond_init(&node->waitCV, NULL);
+		node->next = lock->head->next;
+		lock->head->next = node;
+	}
+
+	pthread_mutex_unlock(&lock->mlock);
 }
 
 void plock_exit (plock_t *lock) { 
