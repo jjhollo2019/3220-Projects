@@ -6,3 +6,6 @@ make: plock.c test1.c
 
 clean:
 	rm a.out
+
+run:
+	/a.out
