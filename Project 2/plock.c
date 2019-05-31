@@ -63,8 +63,8 @@ void plock_enter (plock_t *lock, int priority) {
 void plock_exit (plock_t *lock) { 
    if(lock->head == NULL) return;
    else{
-        pthread_cond_signal(&lock->head);
+       pthread_mutex_unlock(&lock->mlock);
+       pthread_cond_signal(&lock->head->next);
    }
    return;
-
 }
