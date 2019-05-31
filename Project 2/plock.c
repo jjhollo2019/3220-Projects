@@ -43,6 +43,10 @@ void plock_enter (plock_t *lock, int priority) {
  * signal a waiting thread using the appropriate pthread library call
  */
 void plock_exit (plock_t *lock) { 
-
+   if(lock->head == NULL) return;
+   else{
+        pthread_cond_signal(&lock->head);
+   }
+   return;
 
 }
