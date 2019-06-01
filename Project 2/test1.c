@@ -42,13 +42,12 @@ int main( int argc, char **argv ){
 		  sleep( 1 );
    }
 
-/* 
+/*
 	while (priority_lock->head != NULL) {
 	  printf( "thread priority %d\n", priority_lock->head->priority );
 	  priority_lock->head = priority_lock->head->next;
 	}
 */
-
 
    for( i = 0; i < 20; i++ ){
      rc = pthread_join( threads[i], NULL );
