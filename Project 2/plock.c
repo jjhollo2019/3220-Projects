@@ -95,14 +95,22 @@ void plock_enter (plock_t *lock, int priority) {
  * signal a waiting thread using the appropriate pthread library call
  */
 void plock_exit (plock_t *lock) { 
+    //get the lock
+    pthread_mutex_lock(&lock->mlock);
 
-	lock->value = FREE;
-	/*
-   if(lock->head == NULL) return;
-   else{
-       pthread_cond_signal(&lock->head->next->waitCV);
-       pthread_mutex_unlock(&lock->mlock);
-   }
-   return;
-	*/
+    //free the CV
+    pthread_cond_wait(&lock->head->waitCV, &lock->mlock);
+    //destroy the CV
+    pthread_cond_destroy(&lock->head->waitCV);
+
+    //reset the head node
+    node_t *temp = lock->head;
+    lock->head = temp->next;
+    free(temp);
+
+    //signal the next thread to wake
+    pthread_cond_signal(&lock->head->waitCV);
+
+    //release the lock
+    pthread_mutex_unlock(&lock->mlock);
 }
