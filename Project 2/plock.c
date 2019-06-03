@@ -45,11 +45,14 @@ int pri_check(plock_t *lock){
 }
 
 void plock_enter (plock_t *lock, int priority) {
+
+   //enable mutext lock
+	pthread_mutex_lock(&lock->mlock);
 	
-    node_t *node = malloc(sizeof(node_t));
+   node_t *node = malloc(sizeof(node_t));
 	node->priority = priority;
 	pthread_cond_init(&node->waitCV, NULL);
-    node->next = NULL;
+   node->next = NULL;
 
 	//add node in ascending order
 	if (lock->head == NULL || priority > lock->head->priority) {
@@ -66,9 +69,6 @@ void plock_enter (plock_t *lock, int priority) {
 		node->next = n->next;
 		n->next = node;
 	}
-	
-    //enable mutext lock
-	pthread_mutex_lock(&lock->mlock);
 
 	//check for running threads, loop till there's not
 	while (lock->value == BUSY)
@@ -76,22 +76,15 @@ void plock_enter (plock_t *lock, int priority) {
     
     lock->value = BUSY;
 
-	node_t *n = lock->head->next;
-    node_t *prev = lock->head;
-    while(n != node && n != NULL){
-        n = n->next;
-        prev = prev->next;
-    }
-    if(n != NULL){
-        n = n->next;
-    }
-    prev->next = n;
-    pthread_cond_destroy(&node->waitCV);
-    free(node);
+	 if (lock->head != NULL) {
+		node_t *n = lock->head;
+		lock->head = lock->head->next;
+		pthread_cond_destroy(&n->waitCV);
+		free(n);
+	 }
 
 	pthread_mutex_unlock(&lock->mlock);
 
-    lock->value = FREE;
 }
 
 /* This function checks the state variables of the plock data structure
@@ -102,9 +95,10 @@ void plock_exit (plock_t *lock) {
     //get the lock
     pthread_mutex_lock(&lock->mlock);
    
-    lock->value = BUSY;
+    lock->value = FREE;
 
-    pthread_cond_signal(&lock->head->waitCV);
+	 if (lock->head != NULL)
+		 pthread_cond_signal(&lock->head->waitCV);
     
     //release the lock
     pthread_mutex_unlock(&lock->mlock);
