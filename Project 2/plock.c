@@ -6,6 +6,7 @@
 
 #include "plock.h"
 #include "assert.h"
+#include "unistd.h"
 
 plock_t *plock_create() {
 
@@ -31,34 +32,32 @@ void plock_destroy (plock_t *lock) {
     int ret = pthread_mutex_destroy(&lock->mlock);
     assert(ret == 0);
 
+    free(lock);
+
     return;
 }
 
-void plock_enter (plock_t *lock, int priority) {
-	//enable mutext lock
-	pthread_mutex_lock(&lock->mlock);
+int pri_check(plock_t *lock){
+    if(lock->head == NULL)
+        return -1;
+    else
+        return lock->head->priority;
+}
 
-	//check for runnign threads, loop till there's not
-	while (lock->value == BUSY)
-		;
+void plock_enter (plock_t *lock, int priority) {
+	
+    node_t *node = malloc(sizeof(node_t));
+	node->priority = priority;
+	pthread_cond_init(&node->waitCV, NULL);
+    node->next = NULL;
 
 	//add node in ascending order
 	if (lock->head == NULL || priority > lock->head->priority) {
-		// make new node and initialize variables
-		node_t *node = malloc(sizeof(node_t));
-		node->priority = priority;
-		pthread_cond_init(&node->waitCV, NULL);
 		//add to linked list
 		node->next = lock->head;
 		lock->head = node;
-		//set CV to busy
-		lock->value = BUSY;
 	}
 	else {
-		//make new node and initialize variables
-		node_t *node = malloc(sizeof(node_t));
-		node->priority = priority;
-		pthread_cond_init(&node->waitCV, NULL);
 		node_t *n = lock->head;
 
 		//travers linked list and add node in order
@@ -66,28 +65,33 @@ void plock_enter (plock_t *lock, int priority) {
 			n = n->next;
 		node->next = n->next;
 		n->next = node;
-
-		//put thread to sleep
-		pthread_cond_wait(&node->waitCV, &lock->mlock);
 	}
+	
+    //enable mutext lock
+	pthread_mutex_lock(&lock->mlock);
 
-	//wake up thread with highest priority, should be at the head of the list
-	pthread_cond_signal(&lock->head->waitCV);
+	//check for running threads, loop till there's not
+	while (lock->value == BUSY)
+		pthread_cond_wait(&node->waitCV, &lock->mlock);
+    
+    lock->value = BUSY;
 
-	//destroy node
-	node_t *n = lock->head;
-	lock->head = lock->head->next;
-	free(n);
-
-	/*
-
-	 wait (loop) checking if lock is free, and highest priority
-
-	proceed when lock is free
-	and when this thread is highest priority in system
-	*/
+	node_t *n = lock->head->next;
+    node_t *prev = lock->head;
+    while(n != node && n != NULL){
+        n = n->next;
+        prev = prev->next;
+    }
+    if(n != NULL){
+        n = n->next;
+    }
+    prev->next = n;
+    pthread_cond_destroy(&node->waitCV);
+    free(node);
 
 	pthread_mutex_unlock(&lock->mlock);
+
+    lock->value = FREE;
 }
 
 /* This function checks the state variables of the plock data structure
@@ -97,20 +101,13 @@ void plock_enter (plock_t *lock, int priority) {
 void plock_exit (plock_t *lock) { 
     //get the lock
     pthread_mutex_lock(&lock->mlock);
+   
+    lock->value = BUSY;
 
-    //free the CV
-    pthread_cond_wait(&lock->head->waitCV, &lock->mlock);
-    //destroy the CV
-    pthread_cond_destroy(&lock->head->waitCV);
-
-    //reset the head node
-    node_t *temp = lock->head;
-    lock->head = temp->next;
-    free(temp);
-
-    //signal the next thread to wake
     pthread_cond_signal(&lock->head->waitCV);
-
+    
     //release the lock
     pthread_mutex_unlock(&lock->mlock);
+
+    lock->value = FREE;
 }
