@@ -19,15 +19,15 @@ plock_t *plock_create() {
 }
 
 void plock_destroy (plock_t *lock) {
-    node_t *ptr = lock->head;
-    while(ptr != NULL){
+   node_t *ptr = lock->head;
+   while(ptr != NULL){
 
-        int ret = pthread_cond_destroy(&ptr->waitCV);
-        assert(ret == 0);
+       int ret = pthread_cond_destroy(&ptr->waitCV);
+       assert(ret == 0);
 
-        node_t *temp = ptr;
-        ptr = ptr->next;
-        free(temp);
+       node_t *temp = ptr;
+       ptr = ptr->next;
+       free(temp);
     }
     int ret = pthread_mutex_destroy(&lock->mlock);
     assert(ret == 0);
@@ -38,20 +38,10 @@ void plock_destroy (plock_t *lock) {
 }
 
 void plock_enter (plock_t *lock, int priority) {
-<<<<<<< HEAD
-
-   //enable mutext lock
 	pthread_mutex_lock(&lock->mlock);
-	
+
+   //create a new node
    node_t *node = malloc(sizeof(node_t));
-=======
-    
-    //enable mutext lock
-	pthread_mutex_lock(&lock->mlock);
-
-    //create a new node
-    node_t *node = malloc(sizeof(node_t));
->>>>>>> f30a43b55f254550d76ba9b6518c49a1c5af7526
 	node->priority = priority;
 	pthread_cond_init(&node->waitCV, NULL);
    node->next = NULL;
@@ -69,14 +59,10 @@ void plock_enter (plock_t *lock, int priority) {
 		//travers linked list and add node in order
 		while (n->next != NULL && n->next->priority >= priority)
 			n = n->next;
+
 		node->next = n->next;
 		n->next = node;
 	}
-<<<<<<< HEAD
-
-=======
-	
->>>>>>> f30a43b55f254550d76ba9b6518c49a1c5af7526
 	//check for running threads, loop till there's not
 	while (lock->value == BUSY)
 		pthread_cond_wait(&node->waitCV, &lock->mlock);
@@ -84,33 +70,20 @@ void plock_enter (plock_t *lock, int priority) {
     //set the lock as busy
     lock->value = BUSY;
 
-<<<<<<< HEAD
-	 if (lock->head != NULL) {
-		node_t *n = lock->head;
-		lock->head = lock->head->next;
-		pthread_cond_destroy(&n->waitCV);
-		free(n);
-	 }
-=======
     //check if there is anything after the head node
-    if(lock->head->next == NULL)
+    if (lock->head->next == NULL)
         lock->head = NULL;
     //else set the new head
-    else{
+    else {
         lock->head = lock->head->next;
     }
     //destroy the condition variable
     pthread_cond_destroy(&node->waitCV);
     //free the malloc'd memory
     free(node);
->>>>>>> f30a43b55f254550d76ba9b6518c49a1c5af7526
 
     //release the lock
-	pthread_mutex_unlock(&lock->mlock);
-<<<<<<< HEAD
-
-=======
->>>>>>> f30a43b55f254550d76ba9b6518c49a1c5af7526
+	 pthread_mutex_unlock(&lock->mlock);
 }
 
 /* This function checks the state variables of the plock data structure
@@ -121,16 +94,9 @@ void plock_exit (plock_t *lock) {
     //get the lock
     pthread_mutex_lock(&lock->mlock);
    
-<<<<<<< HEAD
-    lock->value = FREE;
-
-	 if (lock->head != NULL)
-		 pthread_cond_signal(&lock->head->waitCV);
-=======
-    if(lock->head != NULL)
+    if (lock->head != NULL)
         pthread_cond_signal(&lock->head->waitCV);
     lock->value = FREE;
->>>>>>> f30a43b55f254550d76ba9b6518c49a1c5af7526
     
     //release the lock
     pthread_mutex_unlock(&lock->mlock);
