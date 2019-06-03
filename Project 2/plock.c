@@ -6,15 +6,19 @@
 
 #include "plock.h"
 #include "assert.h"
-#include "unistd.h"
 
 plock_t *plock_create() {
-
+    //create space for plock_t struct
 	plock_t *ptr = malloc(sizeof(plock_t));
+    //set the lock to free
 	ptr->value = FREE;
-	pthread_mutex_init(&ptr->mlock, NULL);
+    //initialize the mutex
+	int ret = pthread_mutex_init(&ptr->mlock, NULL);
+    assert(ret == 0);
+    //set head pointer to null
 	ptr->head = NULL;
 
+    //return lock pointer
 	return ptr;
 }
 
@@ -28,23 +32,57 @@ void plock_destroy (plock_t *lock) {
        node_t *temp = ptr;
        ptr = ptr->next;
        free(temp);
+
+    //create a traversal pointer
+    node_t *ptr = lock->head;
+    //check for any remaining condition variables
+    while(ptr != NULL){
+        
+        //destroy the context
+        int ret = pthread_cond_destroy(&ptr->waitCV);
+        //check the return value
+        assert(ret == 0);
+
+        //traverse the list 
+        node_t *temp = ptr;
+        ptr = ptr->next;
+        //free the malloc'd memory
+        free(temp);
+>>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
     }
+    //destroy the lock
     int ret = pthread_mutex_destroy(&lock->mlock);
+    //check the return
     assert(ret == 0);
 
+    //free the memory location
     free(lock);
 
-    return;
 }
 
 void plock_enter (plock_t *lock, int priority) {
+<<<<<<< HEAD
 	pthread_mutex_lock(&lock->mlock);
+=======
+    //create a return int for error checking
+    int ret;
+
+    //enable mutext lock
+	ret = pthread_mutex_lock(&lock->mlock);
+    assert(ret == 0);
+>>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 
    //create a new node
    node_t *node = malloc(sizeof(node_t));
 	node->priority = priority;
+<<<<<<< HEAD
 	pthread_cond_init(&node->waitCV, NULL);
    node->next = NULL;
+=======
+	ret = pthread_cond_init(&node->waitCV, NULL);
+    assert(ret == 0);
+    node->next = NULL;
+>>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 
 	//add node if it's the first or highest priority
 	if (lock->head == NULL || priority > lock->head->priority) {
@@ -64,8 +102,10 @@ void plock_enter (plock_t *lock, int priority) {
 		n->next = node;
 	}
 	//check for running threads, loop till there's not
-	while (lock->value == BUSY)
-		pthread_cond_wait(&node->waitCV, &lock->mlock);
+	while (lock->value == BUSY) {
+		ret = pthread_cond_wait(&node->waitCV, &lock->mlock);
+        assert(ret == 0);
+    }
     
     //set the lock as busy
     lock->value = BUSY;
@@ -78,26 +118,42 @@ void plock_enter (plock_t *lock, int priority) {
         lock->head = lock->head->next;
     }
     //destroy the condition variable
-    pthread_cond_destroy(&node->waitCV);
+    ret = pthread_cond_destroy(&node->waitCV);
+    assert(ret == 0);
     //free the malloc'd memory
     free(node);
 
     //release the lock
+<<<<<<< HEAD
 	 pthread_mutex_unlock(&lock->mlock);
+=======
+	ret = pthread_mutex_unlock(&lock->mlock);
+    assert(ret == 0);
+>>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 }
 
-/* This function checks the state variables of the plock data structure
- * to determine what update action to take. For example, it may need to
- * signal a waiting thread using the appropriate pthread library call
- */
 void plock_exit (plock_t *lock) { 
+    int ret;
     //get the lock
+<<<<<<< HEAD
     pthread_mutex_lock(&lock->mlock);
    
     if (lock->head != NULL)
         pthread_cond_signal(&lock->head->waitCV);
+=======
+    ret = pthread_mutex_lock(&lock->mlock);
+    assert(ret == 0);
+
+    //check for any remaining threads and signal if so
+    if(lock->head != NULL){
+        ret = pthread_cond_signal(&lock->head->waitCV);
+        assert(ret == 0);
+    }
+    //free the lock
+>>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
     lock->value = FREE;
     
     //release the lock
-    pthread_mutex_unlock(&lock->mlock);
+    ret = pthread_mutex_unlock(&lock->mlock);
+    assert(ret == 0);
 }
