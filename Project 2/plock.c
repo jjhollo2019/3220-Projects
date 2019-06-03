@@ -37,26 +37,24 @@ void plock_destroy (plock_t *lock) {
     return;
 }
 
-int pri_check(plock_t *lock){
-    if(lock->head == NULL)
-        return -1;
-    else
-        return lock->head->priority;
-}
-
 void plock_enter (plock_t *lock, int priority) {
-	
+    
+    //enable mutext lock
+	pthread_mutex_lock(&lock->mlock);
+
+    //create a new node
     node_t *node = malloc(sizeof(node_t));
 	node->priority = priority;
 	pthread_cond_init(&node->waitCV, NULL);
     node->next = NULL;
 
-	//add node in ascending order
+	//add node if it's the first or highest priority
 	if (lock->head == NULL || priority > lock->head->priority) {
 		//add to linked list
 		node->next = lock->head;
 		lock->head = node;
 	}
+    //else find it's place in the list
 	else {
 		node_t *n = lock->head;
 
@@ -67,31 +65,27 @@ void plock_enter (plock_t *lock, int priority) {
 		n->next = node;
 	}
 	
-    //enable mutext lock
-	pthread_mutex_lock(&lock->mlock);
-
 	//check for running threads, loop till there's not
 	while (lock->value == BUSY)
 		pthread_cond_wait(&node->waitCV, &lock->mlock);
     
+    //set the lock as busy
     lock->value = BUSY;
 
-	node_t *n = lock->head->next;
-    node_t *prev = lock->head;
-    while(n != node && n != NULL){
-        n = n->next;
-        prev = prev->next;
+    //check if there is anything after the head node
+    if(lock->head->next == NULL)
+        lock->head = NULL;
+    //else set the new head
+    else{
+        lock->head = lock->head->next;
     }
-    if(n != NULL){
-        n = n->next;
-    }
-    prev->next = n;
+    //destroy the condition variable
     pthread_cond_destroy(&node->waitCV);
+    //free the malloc'd memory
     free(node);
 
+    //release the lock
 	pthread_mutex_unlock(&lock->mlock);
-
-    lock->value = FREE;
 }
 
 /* This function checks the state variables of the plock data structure
@@ -102,12 +96,10 @@ void plock_exit (plock_t *lock) {
     //get the lock
     pthread_mutex_lock(&lock->mlock);
    
-    lock->value = BUSY;
-
-    pthread_cond_signal(&lock->head->waitCV);
+    if(lock->head != NULL)
+        pthread_cond_signal(&lock->head->waitCV);
+    lock->value = FREE;
     
     //release the lock
     pthread_mutex_unlock(&lock->mlock);
-
-    lock->value = FREE;
 }
