@@ -23,6 +23,16 @@ plock_t *plock_create() {
 }
 
 void plock_destroy (plock_t *lock) {
+   node_t *ptr = lock->head;
+   while(ptr != NULL){
+
+       int ret = pthread_cond_destroy(&ptr->waitCV);
+       assert(ret == 0);
+
+       node_t *temp = ptr;
+       ptr = ptr->next;
+       free(temp);
+
     //create a traversal pointer
     node_t *ptr = lock->head;
     //check for any remaining condition variables
@@ -50,6 +60,7 @@ void plock_destroy (plock_t *lock) {
 }
 
 void plock_enter (plock_t *lock, int priority) {
+	pthread_mutex_lock(&lock->mlock);
     //create a return int for error checking
     int ret;
 
@@ -57,9 +68,11 @@ void plock_enter (plock_t *lock, int priority) {
 	ret = pthread_mutex_lock(&lock->mlock);
     assert(ret == 0);
 
-    //create a new node
-    node_t *node = malloc(sizeof(node_t));
+   //create a new node
+   node_t *node = malloc(sizeof(node_t));
 	node->priority = priority;
+	pthread_cond_init(&node->waitCV, NULL);
+   node->next = NULL;
 	ret = pthread_cond_init(&node->waitCV, NULL);
     assert(ret == 0);
     node->next = NULL;
@@ -77,10 +90,10 @@ void plock_enter (plock_t *lock, int priority) {
 		//travers linked list and add node in order
 		while (n->next != NULL && n->next->priority >= priority)
 			n = n->next;
+
 		node->next = n->next;
 		n->next = node;
 	}
-	
 	//check for running threads, loop till there's not
 	while (lock->value == BUSY) {
 		ret = pthread_cond_wait(&node->waitCV, &lock->mlock);
@@ -91,7 +104,7 @@ void plock_enter (plock_t *lock, int priority) {
     lock->value = BUSY;
 
     //check if there is anything after the head node
-    if(lock->head->next == NULL)
+    if (lock->head->next == NULL)
         lock->head = NULL;
     //else set the new head
     else {
@@ -104,13 +117,19 @@ void plock_enter (plock_t *lock, int priority) {
     free(node);
 
     //release the lock
+	 pthread_mutex_unlock(&lock->mlock);
 	ret = pthread_mutex_unlock(&lock->mlock);
     assert(ret == 0);
 }
 
 void plock_exit (plock_t *lock) { 
-    int ret;
     //get the lock
+    pthread_mutex_lock(&lock->mlock);
+    int ret;
+   
+    if (lock->head != NULL)
+        pthread_cond_signal(&lock->head->waitCV);
+
     ret = pthread_mutex_lock(&lock->mlock);
     assert(ret == 0);
 
