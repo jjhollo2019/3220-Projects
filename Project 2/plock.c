@@ -48,7 +48,6 @@ void plock_destroy (plock_t *lock) {
         ptr = ptr->next;
         //free the malloc'd memory
         free(temp);
->>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
     }
     //destroy the lock
     int ret = pthread_mutex_destroy(&lock->mlock);
@@ -61,28 +60,22 @@ void plock_destroy (plock_t *lock) {
 }
 
 void plock_enter (plock_t *lock, int priority) {
-<<<<<<< HEAD
 	pthread_mutex_lock(&lock->mlock);
-=======
     //create a return int for error checking
     int ret;
 
     //enable mutext lock
 	ret = pthread_mutex_lock(&lock->mlock);
     assert(ret == 0);
->>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 
    //create a new node
    node_t *node = malloc(sizeof(node_t));
 	node->priority = priority;
-<<<<<<< HEAD
 	pthread_cond_init(&node->waitCV, NULL);
    node->next = NULL;
-=======
 	ret = pthread_cond_init(&node->waitCV, NULL);
     assert(ret == 0);
     node->next = NULL;
->>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 
 	//add node if it's the first or highest priority
 	if (lock->head == NULL || priority > lock->head->priority) {
@@ -124,23 +117,19 @@ void plock_enter (plock_t *lock, int priority) {
     free(node);
 
     //release the lock
-<<<<<<< HEAD
 	 pthread_mutex_unlock(&lock->mlock);
-=======
 	ret = pthread_mutex_unlock(&lock->mlock);
     assert(ret == 0);
->>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
 }
 
 void plock_exit (plock_t *lock) { 
-    int ret;
     //get the lock
-<<<<<<< HEAD
     pthread_mutex_lock(&lock->mlock);
+    int ret;
    
     if (lock->head != NULL)
         pthread_cond_signal(&lock->head->waitCV);
-=======
+
     ret = pthread_mutex_lock(&lock->mlock);
     assert(ret == 0);
 
@@ -150,7 +139,6 @@ void plock_exit (plock_t *lock) {
         assert(ret == 0);
     }
     //free the lock
->>>>>>> bd2912f761aee6e3366d8a7c2e085ea6018f17f0
     lock->value = FREE;
     
     //release the lock
